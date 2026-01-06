@@ -1,0 +1,126 @@
+---
+title: "Title"
+author: "Author"
+date: '1st January 1901'
+output:
+  beamer_presentation: 
+    fonttheme: serif 
+    theme: Singapore
+    latex_engine: xelatex
+
+# https://hartwork.org/beamer-theme-matrix/
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## What does this paper do?
+
+-   This paper assesses ...
+
+## Slide with Bullets
+
+-   Bullet 1
+    - Two tabs
+    - It's easier
+        - Another two tabs
+-   Bullet 2
+-   Bullet 3
+
+1. Bullet 1
+    4. See
+2. Bullet 2
+3. Bullet 3
+
+
+## Follow
+
+4. Point four here
+5. Also this one
+
+
+## Results
+
+\centering
+\includegraphics[scale=0.8]{asd2}
+
+Let's see where the text is!
+
+
+## Results 2
+
+\begin{center}
+\includegraphics[scale=0.8]{asd2}
+\end{center}
+Let's see where the text is!
+
+## Math symbols
+
+* In-line equation
+  - My function $y=x^2$ has first order derivative $f'(x)=2x$.
+
+* Centered equation
+  
+  - Econometric model is:
+
+$$y_{ijt}=\alpha+\beta_1 x_1 + \beta_2 x_2 \tag{4}$$
+
+
+- Another way
+
+\begin{equation*}
+y_{ijt}=\alpha+\beta_1 x_1 + \beta_2 x_2 \tag{5}
+\end{equation*}
+
+
+## Align equations
+
+\begin{align*}
+y_{ijt}&=\alpha+\beta_1 x_1 + \beta_2 x_2 \tag{6}\\
+x_1&=\gamma + \gamma_1 z_1 \tag{7}
+\end{align*}
+
+\hyperlink{itemize}{\beamerbutton{go to slide}}
+
+\hypertarget{itemize2}{}
+
+
+
+## Text color
+
+- \textcolor{red}{This is a change}
+- Italic *This is an italic text*
+- **This is a bold text**
+- ***This is a bold and an italic text***
+
+
+## Itemize & Enumerate
+
+\begin{itemize}
+\item[a.] First row
+\item[b.] Second row
+\begin{enumerate}
+\item[1.] This is under the second row
+\item[2.] Also this
+\end{enumerate}
+\end{itemize}
+
+## Itemize & Enumerate 2
+
+\begin{itemize}
+\item[c.] Here is point c!
+\end{itemize}
+
+\hypertarget{itemize}{}
+
+\hyperlink{itemize2}{\beamerbutton{go back}}
+
+## Size
+
+\Large The results are significant
+
+\LARGE The results are more significant
+

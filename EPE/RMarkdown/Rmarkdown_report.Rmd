@@ -1,0 +1,71 @@
+---
+title: "Title"
+author: "Author"
+date: "1st January 1901"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction to R Markdown: Writing a paper or report
+
+This is crude example. For further details, first check the associate documents:
+
+- Rmd_resources.Rmd;
+
+- RMarkdown_slides.Rmd; 
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+# Project: Fuel Demand
+
+We will work with part of the fuel data used in Huse (2018), which estimates the demand for gasoline ($g$) and ethanol ($e$) in the Swedish market. Our aim is to estimate demand equations of the following form:
+
+$$ln(q_{et}) = \alpha_{1e} + \sum_{k=e,g} \gamma_{ek} ln(p_{kt}) + \theta_e Z_{et} + \varepsilon_{t}^e$$
+
+$$ln(q_{gt}) = \alpha_{1g} + \sum_{k=e,g} \gamma_{gk} ln(p_{kt}) + \theta_g Z_{gt} + \varepsilon_{t}^g$$
+
+Here, $t$ denotes months, $q_{ft}$ the sales of fuel $f=e,g$ at period $t$, $p_{ft}$ the price of fuel $f$ at period $t$, $Z_{ft}$ are demographics, controls, and fixed-effects, $\varepsilon_{ft}$ are error terms
+
+
+# OLS 
+
+The basic command for regression models is **lm()**. The optional argument data exists because several data.frame's can co-exist in R.
+
+```{r, eval=F}
+lm(y ~ x1 + x2 + x3 + ..., data = df)
+
+```
+
+The traditional way to extract regression output is via **summary()**, but nicer versions are also available
+
+```{r, eval=F}
+ols1 <- lm(y ~ x, data=df)
+summary(ols1)
+
+library(broom)
+tidy(ols1, conf.int = TRUE)
+glance(ols1)
+
+```
+

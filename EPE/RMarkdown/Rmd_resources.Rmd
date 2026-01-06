@@ -1,0 +1,70 @@
+---
+title: "R Markdown Resources"
+author: "Cristian Huse"
+#institute:
+#date: 
+# titlegraphic: /Dropbox/teaching/abc.png
+fontsize: 11pt
+
+output: pdf_document
+---
+
+# Overview
+
+R Markdown is a part of RStudio which allows integrating text editor and code (e.g., R, Python). It has a number of nice features, such as the fact that it is dynamic (i.e., changing the code will change the document with a click); the fact that the file can be saved in different formats (pdf, doc, html etc); the fact that you can generate slides or A4 documents by changing a few lines of code. 
+
+Pragmatically, from the perspective of a student who is writing a project, report or thesis, it frees you from the need to copy and paste tables and plots into your text editor and update them every time something changes.
+
+
+
+# Basic Resources
+
+Here follow some pointers to resources on R Markdown.
+
+**German**
+
+There are two introductory videos on Florian Heiß's channel that some of you might find useful: 
+
+https://youtu.be/F-6iU1EHoc0
+
+https://youtu.be/K7H1YqeAPzs
+
+The whole playlist on R basics is available here: 
+
+https://www.youtube.com/watch?v=xJudqoGg6Ko&list=PLV0KtPjp4poWkwg73O5ykfWu2mPviYnCq
+
+
+
+**English**
+
+There are thousands of introductory videos in English. For instance:
+
+https://www.youtube.com/watch?v=K418swtFnik
+
+https://www.youtube.com/watch?v=tKUufzpoHDE 
+
+(I see them as complementary.)
+
+
+
+# Not-so-basic Resources
+
+Some more advanced topics:
+
+https://rmarkdown.rstudio.com/articles_integration.html
+
+https://www.rstudio.com/blog/r-markdown-tips-tricks-1-rstudio-ide/
+
+https://www.rstudio.com/blog/r-markdown-tips-tricks-2-cleaning-up-your-code/
+
+https://www.rstudio.com/blog/r-markdown-tips-and-tricks-3-time-savers/
+
+https://www.youtube.com/watch?v=qLEkUjxk7e8
+
+
+# A Researcher's Perspective
+
+A researcher showing how he uses R Markdown for “everything”
+
+https://www.youtube.com/watch?v=_D-ux3MqGug (starting from about 5:30)
+

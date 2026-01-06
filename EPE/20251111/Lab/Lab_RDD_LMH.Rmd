@@ -1,0 +1,390 @@
+---
+title: "Lab Session: Regression Discontinuity Design"
+author: "Cristian Huse"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#Converted to R in May/October 2021 using RStudio Version 1.4.1106
+```
+
+# Introduction
+
+This lab session is about **Regression Discontinuity Design (RD)**. The structure of the session is as follows:
+
+* Preparation;
+  + Load libraries, setwd, load data (.dta format)
+
+* Example 12. Regression Discontinuity Design Estimates
+
+* Nonlinear Functions Around the Threshold
+
+* Narrowing the Window Around the Threshold
+
+While we also briefly discuss the fuzzy RD design, the focus of the empirical exercise is on the sharp RD design.
+
+Please note that our discussion and estimation are based on first principles. See, e.g. https://rdpackages.github.io/ for packages and more advanced material.
+
+
+
+# Preparation
+
+```{r, echo=F}
+
+# ##Install packages (I attempted to list all packages needed in the basic lab sessions)
+# install.packages("AER")
+# install.packages("clubSandwich")
+# install.packages("compositions")
+# install.packages("fixest")
+# install.packages("haven")
+# install.packages("MatchIt")
+# install.packages("Matching")
+# install.packages("modelsummary")
+# install.packages("optmatch")
+# install.packages("panelr")
+# install.packages("plm")
+# install.packages("stargazer")
+# install.packages("tidyverse")
+# install.packages("tidyr")
+
+```
+
+```{r, message=F}
+## Initialize ####
+
+rm(list=ls())
+
+#Load libraries
+library(fixest) #for feols etc
+library(haven) #for read_dta
+library(modelsummary) #for neat tables
+library(tidyverse)
+getwd()
+## Initialize ####
+## Set working directory
+#Specify the access path to the computer folder you will use for the analysis
+## Set working directory
+#setwd("INSERT PATH OF FOLDER WHERE YOU SAVED THE DATASET WITH / or\\")
+
+current_rmd <- rstudioapi::getSourceEditorContext()$path
+
+# Set the working directory to the location of the R Markdown file
+setwd(dirname(current_rmd))
+
+## open data
+#Open the cleaned data set
+#set path for data
+evaluation <- file.path(getwd(), "Data", "evaluation.dta")
+#import .dta file
+library(haven) #for read_dta
+evaluation.df <- read_dta(evaluation)
+
+```
+
+
+
+# Regression Discontinuity Design
+
+As discussed in the lectures, many programmes base eligibility according to a continuous variable (**running variable**); only individuals above/below a given **threshold** (cut-off) are eligible to participate in the programme. This is a setting where regression discontinuity (RD) can be used.
+
+Denoting the running variable by $X_i$, the threshold by $X_0$ and assume eligibility is determined by being below the threshold, so $P_i =1(X_i \le X_0)$. A so called sharp RD design occurs when all units below or above have the same treatment status, without exceptions. The associated regression to be estimated takes the form
+
+$$ Y_i = \beta + \delta P_i + f(X_i) + \varepsilon_i $$
+
+where $Y_i$ is the outcome of interest for individual $i$, $P_i$ is the eligibility indicator for individual $i$, $f(X_i)$ is a continuous function around the threshold, so that the value of this function tends to be asymptotically equal around the threshold, and $\varepsilon_i$ denotes a random error term.
+
+The use of a continuous function of the running variable occurs to account for nonlinearities in the relationship between the running variable and the outcome. To appreciate the importance of the continuity of the function, compare the outcomes of individuals at the cut-off (index 0) against individuals just below the cut-off (index 1):
+
+$$ Y_{i0} = \beta + \delta \times 0 + f(X_0) + \varepsilon_{i0} $$
+$$ Y_{i1} = \beta + \delta \times 1 + f(X_0 - \tau_i) + \varepsilon_{i1} $$
+The difference between the above is 
+
+$$ Y_{i1} - Y_{i0} = \delta + (f(X_0 - \tau_i)-f(X_0)) + (\varepsilon_{i1} - \varepsilon_{i0}) $$
+The continuity of $f()$ around the cut-off $X_0$ implies that $(f(X_0 - \tau_i)-f(X_0))$ vanishes as one gets closer to the cut-off. By taking expectations, $(\varepsilon_{i1} - \varepsilon_{i0})$ also vanishes, thus the **local average treatment effect (LATE)** at the threshold is estimated by $\delta$.
+
+While we will not treat the fuzzy RD design in this session, its intuition is that since the eligibility threshold does not fully determine participation in the programme, one needs to **predict** participation, which is done through the IV framework. On the first-stage, the idea is to predict participation by regressing $P_i$ (**participation**) on an indicator $1(X_i \le 0)$ (**eligibility**), i.e., $P_i = \gamma_0 + \gamma_1 1(X_i \le 0) + \eta_i$. That is, although the indicator does not fully determine whether an individual will participate in the programme or not, it strongly influences programme participation, therefore being used as an instrumental variable to predict program participation.
+
+On the second stage, the idea is to estimate a version of the standard RD regression with $\hat{P}_{i}$ replacing $P_i$, which again yields the **LATE**.
+
+
+
+# Example 12. Regression Discontinuity Design Estimates
+
+Back to the HISP case study, assume that eligibility for the programme depends on a proxy poverty
+index and that data for the poverty index are available only in localities where the program will be offered. Households with a score below a certain cut-off (in this case, a value of 58) are chosen to participate in the program. Households with a score above that cut-off do not participate. The key assumption leading to the use of the sharp RD design is that the eligibility rule is strictly enforced, without any exceptions of either side of the cut-off. 
+As before, the outcome of interest is health expenditures, which is measured after the end of the program. What we will do next is to compare health expenditures at follow-up between households just above and just below the poverty index threshold, in the treatment localities.
+
+To implement the RD design, first normalize the poverty index threshold to 0 and create dummy variables for households with a poverty-targeting index to the left or right of the threshold. This allows the relationship between the outcome variables and the running variable (poverty index) to have different slopes on either side of the threshold. 
+
+Next, run a regression of health expenditures on the indicator of exposure to the programme, as well as the two dummies for whether households have a poverty index to the left or to the right of the threshold. The resulting RD estimate for $\delta$ is $-11.19$.
+
+```{r}
+# Select the relevant data and normalize the poverty index
+rd.df <- subset(evaluation.df, treatment_locality == 1 & round == 1)
+rd.df$poverty_index_left<-ifelse(rd.df$poverty_index <= 58,rd.df$poverty_index - 58, 0)
+rd.df$poverty_index_right<-ifelse(rd.df$poverty_index > 58,rd.df$poverty_index - 58, 0)
+#we are recentering the income distribution, if smaller of equal to 58, recenter it.
+ex12_lm1 <- lm(health_expenditures ~ poverty_index_left + poverty_index_right + 
+                 eligible, 
+               data = rd.df)
+
+ex12_feols1 <- feols(health_expenditures ~ poverty_index_left + 
+                       poverty_index_right + eligible,
+                     cluster = ~ locality_identifier,
+                     data = rd.df)
+
+models12 <- list("ex12_lm1" = ex12_lm1, "ex12_feols1" = ex12_feols1)
+
+modelsummary(models12, 
+             vcov = ~ locality_identifier, 
+             stars = c("*" = .1, "**" = .05, "***" = .01), 
+             fmt = 3, 
+             gof_omit = "AIC|BIC|Log.Lik.|R2 Adj.|R2 Within|R2 Pseudo|F")
+
+#Creating a simple graph
+rd.df$ex12_lm1_pred <- ex12_lm1$fitted.values
+plot(rd.df$poverty_index, rd.df$ex12_lm1_pred, 
+     xlab = "Poverty index", ylab = "Predicted health expenditures")
+
+```
+
+
+
+# Nonlinear Functions Around the Threshold
+
+One natural question to ask yourself is what would happen if $f()$ is actually nonlinear and we didn't account for it. In what follows, we define $f()$ as a cubic polynomial and provide a rough plot (individual ones are commented out) of the polynomial terms (note that we allow left and right terms to have different coefficients in the regression).
+
+Bottom-line is, that since the coefficients associated to the higher order terms of the polynomials aren't statistically significant, the effect of the program doesn't change substantially; at $-10.59$, its effect is quite similar to the original estimates of $-11.19$.
+
+comment:The non-linear function around the threshold in RDD refers to the way the relationship between treatment assignment and outcome variable behaves near the cutoff point. This can involve employing polynomial functions, spline functions, or other flexible models to capture potential non-linearities in the relationship between the treatment and outcomes as they approach and move away from the threshold.
+
+```{r}
+rd.df$poverty_index_left2<-ifelse(rd.df$poverty_index <= 58,(rd.df$poverty_index - 58)^2, 0)
+rd.df$poverty_index_right2<-ifelse(rd.df$poverty_index > 58,(rd.df$poverty_index - 58)^2, 0)
+
+rd.df$poverty_index_left3<-ifelse(rd.df$poverty_index <= 58,(rd.df$poverty_index - 58)^3, 0)
+rd.df$poverty_index_right3<-ifelse(rd.df$poverty_index > 58,(rd.df$poverty_index - 58)^3, 0)
+
+# Terms of polynomial
+summary(rd.df$poverty_index_left,rd.df$poverty_index_right,rd.df$poverty_index_left2, rd.df$poverty_index_right2, rd.df$poverty_index_left3, rd.df$poverty_index_right3)
+
+# plot(rd.df$poverty_index, rd.df$poverty_index_left,      xlim=c(0,100), ylim=c(-100,100), xlab = "Poverty Index", ylab = "Transformation", main = "Linear Component")
+# points(rd.df$poverty_index, rd.df$poverty_index_right, col = 2)
+
+# Create the plot
+plot(rd.df$poverty_index, rd.df$poverty_index_left, 
+     xlim = c(0, 100), ylim = c(-100, 100), 
+     xlab = "Poverty Index", ylab = "Transformation", 
+     main = "Linear Component")
+
+# Add the second set of points with a different color
+points(rd.df$poverty_index, rd.df$poverty_index_right, col = 2)
+
+# Add a legend to the plot
+legend("topright", # Position of the legend
+       legend = c("Left Transformation", "Right Transformation"), # Labels
+       col = c(1, 2), # Colors matching the points
+       pch = c(1, 1)) # Point symbols
+
+
+# plot(rd.df$poverty_index, rd.df$poverty_index_left2, col = 3, xlim=c(0,100), ylim=c(-100,100), xlab = "Poverty Index", ylab = "Transformation", main = "Quadratic Component")
+# points(rd.df$poverty_index, rd.df$poverty_index_right2, col = 4)
+
+# Quadratic Component Plot
+plot(rd.df$poverty_index, rd.df$poverty_index_left2, 
+     col = 3, xlim = c(0, 100), ylim = c(-100, 100), 
+     xlab = "Poverty Index", ylab = "Transformation", 
+     main = "Quadratic Component")
+
+# Add the second set of points
+points(rd.df$poverty_index, rd.df$poverty_index_right2, col = 4)
+
+# Add a legend
+legend("topright", 
+       legend = c("Left Quadratic Transformation", "Right Quadratic Transformation"), 
+       col = c(3, 4), 
+       pch = c(1, 1))
+
+# plot(rd.df$poverty_index, rd.df$poverty_index_left3, col = 5, xlim=c(0,100), ylim=c(-100,100), xlab = "Poverty Index", ylab = "Transformation", main = "Cubic Component")
+# points(rd.df$poverty_index, rd.df$poverty_index_right3, col = 6)
+
+# Cubic Component Plot
+plot(rd.df$poverty_index, rd.df$poverty_index_left3, 
+     col = 5, xlim = c(0, 100), ylim = c(-100, 100), 
+     xlab = "Poverty Index", ylab = "Transformation", 
+     main = "Cubic Component")
+
+# Add the second set of points
+points(rd.df$poverty_index, rd.df$poverty_index_right3, col = 6)
+
+# Add a legend
+legend("topright", 
+       legend = c("Left Cubic Transformation", "Right Cubic Transformation"), 
+       col = c(5, 6), 
+       pch = c(1, 1))
+
+
+#Combined
+
+# plot(rd.df$poverty_index, rd.df$poverty_index_left, 
+#      xlim=c(0,100), ylim=c(-100,100),  
+#      xlab = "Poverty Index", ylab = "Transformation", 
+#      main = "Terms of Cubic Polynomial")
+# points(rd.df$poverty_index, rd.df$poverty_index_right, col = 2)
+# points(rd.df$poverty_index, rd.df$poverty_index_left2, col = 3)
+# points(rd.df$poverty_index, rd.df$poverty_index_right2, col = 4)
+# points(rd.df$poverty_index, rd.df$poverty_index_left3, col = 5)
+# points(rd.df$poverty_index, rd.df$poverty_index_right3, col = 6)
+
+# Combined Plot for Terms of Cubic Polynomial
+plot(rd.df$poverty_index, rd.df$poverty_index_left, 
+     xlim = c(0, 100), ylim = c(-100, 100),  
+     xlab = "Poverty Index", ylab = "Transformation", 
+     main = "Terms of Cubic Polynomial")
+
+# Adding points for each transformation
+points(rd.df$poverty_index, rd.df$poverty_index_right, col = 2)   # Right linear
+points(rd.df$poverty_index, rd.df$poverty_index_left2, col = 3)  # Left quadratic
+points(rd.df$poverty_index, rd.df$poverty_index_right2, col = 4) # Right quadratic
+points(rd.df$poverty_index, rd.df$poverty_index_left3, col = 5)  # Left cubic
+points(rd.df$poverty_index, rd.df$poverty_index_right3, col = 6) # Right cubic
+
+# Adding a legend to distinguish each component
+legend("topright", 
+       legend = c("Left Linear", "Right Linear", "Left Quadratic", 
+                  "Right Quadratic", "Left Cubic", "Right Cubic"), 
+       col = c(1, 2, 3, 4, 5, 6), 
+       pch = 1)
+
+
+
+ex12_lm2 <- lm(health_expenditures ~ poverty_index_left + poverty_index_right + 
+                 poverty_index_left2 + poverty_index_right2 +
+                 poverty_index_left3 + poverty_index_right3 +
+                 eligible,
+              data = rd.df)
+
+ex12_feols2 <- feols(health_expenditures ~ poverty_index_left + poverty_index_right +                        poverty_index_left2 + poverty_index_right2 +
+                       poverty_index_left3 + poverty_index_right3 +
+                       eligible, 
+                     cluster = ~ locality_identifier,
+                     data = rd.df)
+
+models12 <- list("ex12_lm1" = ex12_lm1, "ex12_feols1" = ex12_feols1, 
+                 "ex12_lm2" = ex12_lm2, "ex12_feols2" = ex12_feols2)
+
+modelsummary(models12, 
+             vcov = ~ locality_identifier, 
+             stars = c("*" = .1, "**" = .05, "***" = .01), 
+             fmt = 3, 
+             gof_omit = "AIC|BIC|Log.Lik.|R2 Adj.|R2 Within|R2 Pseudo|F")
+
+```
+
+
+
+# Narrowing the Window Around the Threshold
+
+We now illustrate another dimension of RD estimates. Recall that identification in the RD design relies on a conditional expectation as one approaches the threshold, i.e., it relies on a mass of observations just above and just below the threshold. That is, **the window width is crucial for identification**. However, by dramatically reducing the window width one is decreasing the sample size effectively used in the analysis, leading to less price estimates. In other words, the choice of window width entails -- as in many other cases the famous **bias-variance trade-off**.
+
+In what follows, we plot a (very undersmoothed) histogram of the poverty index to get a sense of how the variable looks like. We then estimate a number of models whereby we progressively narrow the window around the threshold from full sample down to +-40, +-30, +-20, +-10, +-5 up to +-2. Narrowing the window obviously drops observations from the estimation sample (see table), but you will realize that the estimates are largely robust up to +-5 around the threshold. Also expected is the increase in standard errors due to the smaller sample. All in all, the results are largely robust to changes in window width and you can see the **bias-variance trade-off** in practice. The table reports a subset of specifications.
+
+
+# THE IDEA BEHIND QUICKLY EXPLAINED BY THE PROFESSOR: 
+# in this distribution of poverty index, maybe the super rich and the super poor are not effect by the treatment much. We should concentrate on around the threshold. 
+
+
+```{r}
+# This is undersmoothed (= many classes) on purpose
+hist(rd.df$poverty_index, breaks = 75, main = "Histogram of Poverty Index", 
+     xlab = "Poverty Index")
+
+summary(rd.df$poverty_index)
+#range: 23.03-100
+
+ex_lm_full <- lm(health_expenditures ~ eligible + 
+                 poverty_index_left + poverty_index_right, 
+                     data = rd.df) #full sample
+# Window +-40: starting to slide the study
+rd.df$window_pm40 <- (rd.df$poverty_index<=98&rd.df$poverty_index>=18)
+#sum(rd.df$window_pm40)
+ex_lm_40 <- lm(health_expenditures ~ eligible + 
+                 poverty_index_left + poverty_index_right, 
+                    subset = rd.df$window_pm40,  
+                     data = rd.df)
+# Window +-30
+rd.df$window_pm30 <- (rd.df$poverty_index<=88&rd.df$poverty_index>=28)
+#sum(rd.df$window_pm30)
+ex_lm_30 <- lm(health_expenditures ~ eligible + 
+                 poverty_index_left + poverty_index_right, 
+                    subset = rd.df$window_pm30,  
+                     data = rd.df)
+# Window +-20
+rd.df$window_pm20 <- (rd.df$poverty_index<=78&rd.df$poverty_index>=38)
+#sum(rd.df$window_pm20)
+ex_lm_20 <- lm(health_expenditures ~ eligible + 
+                 poverty_index_left + poverty_index_right, 
+                    subset = rd.df$window_pm20,  
+                     data = rd.df)
+# Window +-10
+rd.df$window_pm10 <- (rd.df$poverty_index<=68&rd.df$poverty_index>=48)
+#sum(rd.df$window_pm10)
+ex_lm_10 <- lm(health_expenditures ~ eligible + 
+                 poverty_index_left + poverty_index_right, 
+                    subset = rd.df$window_pm10,  
+                     data = rd.df)
+# Window +-5
+rd.df$window_pm5 <- (rd.df$poverty_index<=63&rd.df$poverty_index>=53)
+#sum(rd.df$window_pm5)
+ex_lm_5 <- lm(health_expenditures ~ eligible + 
+                 poverty_index_left + poverty_index_right, 
+                    subset = rd.df$window_pm5,  
+                     data = rd.df)
+# Window +-2
+rd.df$window_pm2 <- (rd.df$poverty_index<=60&rd.df$poverty_index>=56)
+#sum(rd.df$window_pm2)
+ex_lm_2 <- lm(health_expenditures ~ eligible + 
+                 poverty_index_left + poverty_index_right, 
+                    subset = rd.df$window_pm2,  
+                     data = rd.df)
+
+```
+
+```{r}
+#Report some of them
+modelswindow <- list("Full Sample" = ex_lm_full, "Window: +- 30" = ex_lm_30, 
+                     "Window: +- 10" = ex_lm_10, "Window: +- 2" = ex_lm_2)
+
+modelsummary(modelswindow, 
+             vcov = ~ locality_identifier, 
+             stars = c("*" = .1, "**" = .05, "***" = .01), 
+             fmt = 3, 
+             gof_omit = "AIC|BIC|Log.Lik.|R2 Adj.|R2 Within|R2 Pseudo|F")
+
+.#when you have less observation, then you have bigger S.E
+
+```
+
+
+
+# References
+
+Gertler, Paul J.; Martinez, Sebastian; Premand, Patrick; Rawlings, Laura
+B.; Vermeersch, Christel M. J. (2016). Impact Evaluation in Practice, Second Edition, Technical Companion (Version 1.0). Washington, DC: Inter-American Development Bank and World Bank.
+
+# QUiZ QUESTIONS
+1.	RD provides an estimate of LATE instead of ATE
+a.	Because it is the estimation of difference of the non-treated and treated at the threshold (less power than asserting the whole sample)
+
+2.	The difference between sharp and fuzzy discontinuity:
+a.	Sharp continuity is when the discontinuity precisely determines the treatment. In other words, i.e. those who are above the threshold receive the treatment and those who are under it don’t receive the treatment. 
+b.	Fuzzy discontinuity is when the difference for the individual above and under the threshold does not totally determine if these 2 sub-groups receive the treatment or not. For example, sometimes this can be due to marginal differences.
+
+3.	Why RD would suffer more from power problem: because the estimation is being done around the threshold. Hence, this would reduce the number of observation than the total sample size
+
+4.	How one should implement RD, which regression one would estimate
+a.	We would estimate the participation of the program along with constructing an index on around the threshold (i.e. if the individual has the income higher than a threshold –> assign value 1, if not assign value 0). Then we estimate the effect it has one the outcome of the study. Difference of the CG and TG at post-treatment data
+
+5.	Which type of data that RD would be implemented: continuous data for the eligibility index
+
